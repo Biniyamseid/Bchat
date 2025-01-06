@@ -199,7 +199,7 @@ async def check_or_create_table_async():
             return table
 
 
-@router.post("/chat-with-history3", response_model=ChatResponse)
+@router.post("/chat-with-history", response_model=ChatResponse)
 async def chat_with_histor3(request: ChatRequest):
     try:
         # Step 1: Retrieve the lead information
