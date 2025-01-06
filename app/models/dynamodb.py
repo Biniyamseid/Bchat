@@ -459,52 +459,5 @@ def update_chat_session(item_id: str, new_data: dict):
 
 
 
-# from pynamodb.models import Model
-# from pynamodb.attributes import (
-#     UnicodeAttribute,
-#     UTCDateTimeAttribute,
-#     MapAttribute,
-#     ListAttribute,
-# )
-# from datetime import datetime
-
-# class Message(MapAttribute):
-#     id = UnicodeAttribute()
-#     role = UnicodeAttribute()
-#     content = UnicodeAttribute()
-#     timestamp = UTCDateTimeAttribute()
-
-# class ChatSession(Model):
-#     class Meta:
-#         table_name = 'chat_sessions'
-#         region = 'us-east-1'
-    
-#     id = UnicodeAttribute(hash_key=True)
-#     user_id = UnicodeAttribute()
-#     title = UnicodeAttribute()
-#     messages = ListAttribute(of=Message)
-#     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
-#     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
-
-# class ChatbotScript(Model):
-#     class Meta:
-#         table_name = 'chatbot_scripts'
-#         region = 'us-east-1'
-    
-#     id = UnicodeAttribute(hash_key=True)
-#     content = UnicodeAttribute()
-#     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
-#     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
-
-# class CompanyKnowledge(Model):
-#     class Meta:
-#         table_name = 'company_knowledge'
-#         region = 'us-east-1'
-    
-#     id = UnicodeAttribute(hash_key=True)
-#     content = UnicodeAttribute()
-#     embedding = ListAttribute()
-#     metadata = MapAttribute()
-#     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
 
 
