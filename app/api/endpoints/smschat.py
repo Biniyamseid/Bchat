@@ -20,12 +20,19 @@ from typing import Optional, Dict
 from datetime import datetime
 from app.models.dynamodb import ChatSession, LeadInformation, Chatbot, ChatbotScript 
 from pynamodb.models import Model
+from fastapi import Form, Request, HTTPException
+from typing import Optional
+
+from fastapi import Request, Response
+import json
 
 import hmac
 import hashlib
 import base64
 from fastapi import Request, Header, HTTPException, Form
 from typing import Optional
+import requests
+from fastapi import HTTPException
 
 
 from pynamodb.attributes import (
@@ -36,20 +43,39 @@ from pynamodb.attributes import (
     MapAttribute,
 )
 
+
+import requests
+from fastapi import HTTPException
+from pydantic import BaseModel
+
+    
+from pydantic import BaseModel
+import requests
+import base64
+from fastapi import HTTPException
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
+from datetime import datetime, timedelta
+import json
+from fastapi import Response, Request
+
+# simple message cache to prevent duplicates
+# it Stores message IDs and their timestamps
+message_cache = {}
+CACHE_EXPIRY_SECONDS = 60  # Messages expire after 60 seconds
+
+
 TEXTGRID_WEBHOOK_SECRET = "b013cfe83a1e4fcebe2e49bc33eb0e90" 
-WEBHOOK_URL = "http://rnbgb-102-218-51-115.a.free.pinggy.link/api/v1/sms/receive-sms" 
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 TEXTGRID_ACCOUNT_SID = os.getenv("TEXTGRID_ACCOUNT_SID")
 TEXTGRID_AUTH_TOKEN = os.getenv("TEXTGRID_AUTH_TOKEN")
 TEXTGRID_PHONE_NUMBER_SID = os.getenv("TEXTGRID_PHONE_NUMBER_SID")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-
 
 
 router = APIRouter()
@@ -59,8 +85,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     system_prompt: Optional[str] = "You are a real estate sales agent."
-    
-    
+      
 
 class ChatResponse(BaseModel):
     response: str
@@ -140,10 +165,6 @@ def get_chat_chain(system_prompt: str):
         raise HTTPException(status_code=500, detail=f"Error setting up chat chain: {str(e)}")
 
 
-
-
-
-
 class Message(MapAttribute):
     id = UnicodeAttribute()
     role = UnicodeAttribute()
@@ -170,7 +191,7 @@ def send_sms_via_textgrid(to_number: str, message_body: str):
     payload = {
         "body": message_body,
         "from": "+14805001652",  # Your TextGrid number
-        # "to": to_number
+        # "to": to_number,
         "to": "+1-586-447-7339",
         # "to":"+1 214-356-1277"
         
@@ -394,11 +415,7 @@ def verify_textgrid_signature(signature: str, webhook_url: str, body: str) -> bo
         print(f"Signature verification error: {str(e)}")
         return False
 
-from fastapi import Form, Request, HTTPException
-from typing import Optional
 
-from fastapi import Request, Response
-import json
 
 def format_phone_number(phone_number: str) -> str:
     """
@@ -421,262 +438,163 @@ def format_phone_number(phone_number: str) -> str:
         print(f"Error formatting phone number: {str(e)}")
         return phone_number
 
+
+
+def is_duplicate_message(message_sid: str) -> bool:
+    """
+    Check if a message has been recently processed
+    """
+    now = datetime.utcnow()
+    
+    # Clean expired entries
+    expired = [sid for sid, timestamp in message_cache.items() 
+              if (now - timestamp) > timedelta(seconds=CACHE_EXPIRY_SECONDS)]
+    for sid in expired:
+        message_cache.pop(sid)
+    
+    # Check if message is in cache
+    if message_sid in message_cache:
+        return True
+    
+    # Add new message to cache
+    message_cache[message_sid] = now
+    return False
+
 @router.post("/receive-sms")
 async def receive_sms(request: Request):
     try:
         # Get the raw form data
         form_data = await request.form()
-        
-        # Convert form data to dict for logging
         webhook_data = dict(form_data)
         
         # Log all received data
         print("Received webhook data:")
         print(json.dumps(webhook_data, indent=2))
         
+        # Check for duplicate message
+        message_sid = webhook_data.get('MessageSid')
+        if message_sid and is_duplicate_message(message_sid):
+            print(f"Duplicate message detected: {message_sid}")
+            return Response(
+                content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
+                media_type="application/xml"
+            )
+        
         # Extract the important fields if they exist
         from_number = webhook_data.get('From', webhook_data.get('from', ''))
         message_body = webhook_data.get('Body', webhook_data.get('body', ''))
         formatted_number = format_phone_number(from_number)
-        print(f"From: {from_number}")
+        
+        print(f"Processing new message from: {from_number}")
         print(f"Message: {message_body}")
 
         if message_body and from_number:
-            # Create a chat request
             chat_request = ChatRequest(
                 session_id=formatted_number,
                 message=message_body,
                 user_id=formatted_number
             )
 
-            # Process the message using existing chat_with_history function
             response = await chat_with_histor3(chat_request)
 
-            # Return XML response as expected by TextGrid
             xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Message>{response.response}</Message>
-</Response>"""
+                <Response>
+                    <Message>{response.response}</Message>
+                </Response>"""
 
             return Response(
                 content=xml_response,
                 media_type="application/xml"
             )
         
-        # If we don't have message content, just acknowledge receipt
         return Response(
             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
             media_type="application/xml"
         )
 
     except Exception as e:
-        # Log any errors
         print(f"Error processing webhook: {str(e)}")
         print(f"Error type: {type(e)}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         
-        # Return empty response to acknowledge receipt
         return Response(
             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
             media_type="application/xml"
         )
-
 # @router.post("/receive-sms")
-# async def receive_sms(
-#     request: Request,
-#     account_sid: str = Form(...),
-#     message_sid: str = Form(...),
-#     body: str = Form(...),
-#     from_: str = Form(alias="From"),
-#     to: str = Form(alias="To"),
-#     api_version: str = Form(...),
-#     sms_message_sid: str = Form(...),
-#     num_media: str = Form(...),
-#     sms_sid: str = Form(...),
-#     sms_status: str = Form(...),
-#     num_segments: str = Form(...)
-# ):
+# async def receive_sms(request: Request):
 #     try:
-#         # Log incoming message details
-#         print(f"Received SMS from {from_}: {body}")
-
-#         # Create a chat request
-#         chat_request = ChatRequest(
-#             session_id=sms_sid,  # Use SMS SID as session ID
-#             message=body,
-#             user_id=from_  # Use sender's phone number as user ID
-#         )
-
-#         # Process the message using existing chat_with_history function
-#         response = await chat_with_histor3(chat_request)
-
-#         # Return XML response as expected by TextGrid
-#         xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-# <Response>
-#     <Message>{response.response}</Message>
-# </Response>"""
-
-#         return Response(
-#             content=xml_response,
-#             media_type="application/xml"
-#         )
-
-#     except Exception as e:
-#         print(f"Error processing incoming SMS: {str(e)}")
-#         # Return empty response to acknowledge receipt
-#         return Response(
-#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
-#             media_type="application/xml"
-#         )
-
-# Optional: Add a function to validate TextGrid signature if needed
-def verify_textgrid_signature(signature: str, url: str, params: dict) -> bool:
-    return True
-# @router.post("/receive-sms")
-# async def receive_sms(
-#     request: Request,
-#     x_textgrid_signature: Optional[str] = Header(None),
-#     account_sid: str = Form(...),
-#     message_sid: str = Form(...),
-#     body: str = Form(...),
-#     from_: str = Form(..., alias="From"),
-#     to: str = Form(..., alias="To"),
-#     sms_status: str = Form(...),
-# ):
-#     try:
-#         # Get the raw body for signature verification
-#         raw_body = await request.body()
-#         raw_body_str = raw_body.decode('utf-8')
-
-#         # Verify TextGrid signature
-#         if x_textgrid_signature:
-#             if not verify_textgrid_signature(x_textgrid_signature, WEBHOOK_URL, raw_body_str):
-#                 raise HTTPException(status_code=401, detail="Invalid signature")
-
-#         # Log the incoming message
-#         print(f"Received SMS - From: {from_}, Body: {body}, Status: {sms_status}")
-
-#         # Create a chat request
-#         chat_request = ChatRequest(
-#             session_id=message_sid,  # Use message_sid as session_id
-#             message=body,
-#             user_id=from_  # Use sender's phone number as user_id
-#         )
-
-#         # Process the message using existing chat_with_history function
-#         response = await chat_with_histor3(chat_request)
-
-#         # Return XML response as expected by TextGrid
-#         xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-# <Response>
-#     <Message>{response.response}</Message>
-# </Response>"""
-
-#         return Response(
-#             content=xml_response,
-#             media_type="application/xml"
-#         )
-
-#     except Exception as e:
-#         print(f"Error processing incoming SMS: {str(e)}")
-#         # Return empty response to acknowledge receipt
-#         return Response(
-#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
-#             media_type="application/xml"
-#         )
-
-
-
-import requests
-from fastapi import HTTPException
-
-# def update_phone_number_webhook(
-#     account_sid: str,
-#     phone_number_sid: str,
-#     webhook_url: str,
-#     auth_token: str
-# ) -> dict:
-#     """
-#     Update a TextGrid phone number's webhook settings
-#     """
-#     url = f"https://api.textgrid.com/2010-04-01/Accounts/{account_sid}/IncomingPhoneNumbers/{phone_number_sid}.json"
-    
-#     # Prepare the webhook configuration
-#     payload = {
-#         "smsUrl": webhook_url,  # Your webhook URL
-#         "smsMethod": "POST",    # Using POST method
-#         "statusCallback": webhook_url,  # Same URL for status callbacks
-#         "statusCallbackMethod": "POST"
-#     }
-    
-#     # Create the authorization header
-#     auth_string = f"{account_sid}:{auth_token}"
-#     auth_encoded = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
-    
-#     headers = {
-#         "Content-Type": "application/x-www-form-urlencoded",
-#         "Authorization": f"Bearer {auth_encoded}"
-#     }
-
-#     try:
-#         response = requests.post(url, data=payload, headers=headers)
+#         # Get the raw form data
+#         form_data = await request.form()
         
-#         if response.status_code == 401:
-#             raise HTTPException(status_code=401, detail="Unauthorized: Invalid credentials")
+#         # Convert form data to dict for logging
+#         webhook_data = dict(form_data)
         
-#         if response.status_code != 200:
-#             raise HTTPException(
-#                 status_code=response.status_code,
-#                 detail=f"Failed to update phone number: {response.text}"
+#         # Log all received data
+#         print("Received webhook data:")
+#         print(json.dumps(webhook_data, indent=2))
+        
+#         # Extract the important fields if they exist
+#         from_number = webhook_data.get('From', webhook_data.get('from', ''))
+#         message_body = webhook_data.get('Body', webhook_data.get('body', ''))
+#         formatted_number = format_phone_number(from_number)
+#         print(f"From: {from_number}")
+#         print(f"Message: {message_body}")
+
+#         if message_body and from_number:
+#             # Create a chat request
+#             chat_request = ChatRequest(
+#                 session_id=formatted_number,
+#                 message=message_body,
+#                 user_id=formatted_number
+#             )
+
+#             # Process the message using existing chat_with_history function
+#             response = await chat_with_histor3(chat_request)
+
+#             # Return XML response as expected by TextGrid
+#             xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+#                 <Response>
+#                     <Message>{response.response}</Message>
+#                 </Response>"""
+
+#             return Response(
+#                 content=xml_response,
+#                 media_type="application/xml"
 #             )
         
-#         return response.json()
-    
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error updating phone number: {str(e)}")
-
-# Example usage in a FastAPI endpoint
-# @router.post("/configure-webhook")
-# async def configure_webhook(
-#     account_sid: str,
-#     phone_number_sid: str,
-#     webhook_url: str = "https://519044fb025af0.lhr.life/api/v1/sms/receive-sms"  # webhook URL
-# ):
-#     """
-#     Configure the webhook URL for a TextGrid phone number
-#     """
-#     try:
-#         # Get these from your environment variables or secure configuration
-#         TEXTGRID_AUTH_TOKEN = "your_auth_token_here"
-        
-#         result = update_phone_number_webhook(
-#             account_sid=account_sid,
-#             phone_number_sid=phone_number_sid,
-#             webhook_url=webhook_url,
-#             auth_token=TEXTGRID_AUTH_TOKEN
+#         # If we don't have message content, just acknowledge receipt
+#         return Response(
+#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
+#             media_type="application/xml"
 #         )
-        
-#         return {
-#             "status": "success",
-#             "message": "Webhook configured successfully",
-#             "details": result
-#         }
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-    
 
-from pydantic import BaseModel
+#     except Exception as e:
+#         # Log any errors
+#         print(f"Error processing webhook: {str(e)}")
+#         print(f"Error type: {type(e)}")
+#         import traceback
+#         print(f"Traceback: {traceback.format_exc()}")
+        
+#         # Return empty response to acknowledge receipt
+#         return Response(
+#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
+#             media_type="application/xml"
+#         )
+
+def verify_textgrid_signature(signature: str, url: str, params: dict) -> bool:
+    return True
+
+
 
 class WebhookConfig(BaseModel):
     account_sid: str
     phone_number_sid: str
-    webhook_url: str = " http://rnbgb-102-218-51-115.a.free.pinggy.link/api/v1/sms/receive-sms"
-from pydantic import BaseModel
-import requests
-import base64
-from fastapi import HTTPException
+    webhook_url: str = os.getenv("WEBHOOK_URL")
+    
+    
+
 
 def test_credentials(account_sid: str, auth_token: str):
     url = f"https://api.textgrid.com/2010-04-01/Accounts/{account_sid}/IncomingPhoneNumbers.json"
@@ -690,7 +608,6 @@ def test_credentials(account_sid: str, auth_token: str):
     response = requests.get(url, headers=headers)
     print(f"Test Response: {response.status_code} - {response.text}")
     return response
-# print(test_credentials("KxyPVgnXwhFE48n6dcYCcA==", "98D0D330FC624212A1DF514A7A9BA2BA"))
 
 def update_phone_number_webhook(
     account_sid: str,
@@ -708,7 +625,7 @@ def update_phone_number_webhook(
         "FriendlyName": "My Webhook Configuration",  # Optional
         "SmsUrl": webhook_url,
         "SmsMethod": "POST",
-        "StatusCallback": webhook_url,
+        "StatusCallback": "",
         "StatusCallbackMethod": "POST"
     }
     
@@ -756,7 +673,7 @@ async def configure_webhook(config: WebhookConfig):
         result = update_phone_number_webhook(
             account_sid="KxyPVgnXwhFE48n6dcYCcA==",  
             phone_number_sid="f~jDHOvUT71qyyXQlvvZpA==", 
-            webhook_url=" http://rnbgb-102-218-51-115.a.free.pinggy.link/api/v1/sms/receive-sms",
+            webhook_url=os.getenv("WEBHOOK_URL"),
             auth_token="98D0D330FC624212A1DF514A7A9BA2BA" 
         )
         
@@ -768,189 +685,6 @@ async def configure_webhook(config: WebhookConfig):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-# def update_phone_number_webhook(
-#     account_sid: str,
-#     phone_number_sid: str,
-#     webhook_url: str,
-#     auth_token: str
-# ) -> dict:
-#     """
-#     Update a TextGrid phone number's webhook settings
-#     """
-#     url = f"https://api.textgrid.com/2010-04-01/Accounts/{account_sid}/IncomingPhoneNumbers/{phone_number_sid}.json"
-    
-#     # Prepare the webhook configuration
-#     payload = {
-#         "smsUrl": webhook_url,
-#         "smsMethod": "POST",
-#         "statusCallback": webhook_url,
-#         "statusCallbackMethod": "POST"
-#     }
-    
-#     # TextGrid expects the Authorization header in this format
-#     headers = {
-#         "Content-Type": "application/x-www-form-urlencoded",
-#         "Authorization": f"Bearer {auth_token}" 
-#     }
-
-#     try:
-#         response = requests.post(url, data=payload, headers=headers)
-        
-#         # Log the response for debugging
-#         print(f"TextGrid API Response: {response.status_code} - {response.text}")
-        
-#         if response.status_code == 401:
-#             raise HTTPException(status_code=401, detail="Unauthorized: Invalid credentials")
-        
-#         if response.status_code != 200:
-#             raise HTTPException(
-#                 status_code=response.status_code,
-#                 detail=f"Failed to update phone number: {response.text}"
-#             )
-        
-#         return response.json()
-    
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error updating phone number: {str(e)}")
-
-# @router.post("/configure-webhook")
-# async def configure_webhook(config: WebhookConfig):
-#     """
-#     Configure the webhook URL for a TextGrid phone number
-#     """
-#     try:
-#         # Use the correct credentials
-#         ACCOUNT_SID = "KxyPVgnXwhFE48n6dcYCcA=="
-#         AUTH_TOKEN = "S3h5UFZnblh3aEZFNDhuNmRjWUNjQT09Ojk4RDBEMzMwRkM2MjQyMTJBMURGNTE0QTdBOUJBMkJB"
-        
-#         result = update_phone_number_webhook(
-#             account_sid="KxyPVgnXwhFE48n6dcYCcA==",
-#             phone_number_sid="f~jDHOvUT71qyyXQlvvZpA==",
-#             webhook_url="https://rndcd-102-218-51-115.a.free.pinggy.link/api/v1/sms/receive-sms",
-#             auth_token="98D0D330FC624212A1DF514A7A9BA2BA"
-#         )
-        
-#         return {
-#             "status": "success",
-#             "message": "Webhook configured successfully",
-#             "details": result
-#         }
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# Define request model
-# class WebhookConfig(BaseModel):
-#     account_sid: str
-#     phone_number_sid: str
-#     webhook_url: str = "https://rndcd-102-218-51-115.a.free.pinggy.link/api/v1/sms/receive-sms"
-
-# @router.post("/configure-webhook")
-# async def configure_webhook(config: WebhookConfig):
-#     """
-#     Configure the webhook URL for a TextGrid phone number
-#     """
-#     try:
-        
-#         TEXTGRID_AUTH_TOKEN = "98D0D330FC624212A1DF514A7A9BA2BA"
-        
-#         result = update_phone_number_webhook(
-#             account_sid=config.account_sid,
-#             phone_number_sid=config.phone_number_sid,
-#             webhook_url=config.webhook_url,
-#             auth_token=TEXTGRID_AUTH_TOKEN
-#         )
-        
-#         return {
-#             "status": "success",
-#             "message": "Webhook configured successfully",
-#             "details": result
-#         }
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-import requests
-from fastapi import HTTPException
-
-# def update_phone_number_webhook(
-#     account_sid: str,
-#     phone_number_sid: str,
-#     webhook_url: str,
-#     auth_token: str
-# ) -> dict:
-#     """
-#     Update a TextGrid phone number's webhook settings
-#     """
-#     url = f"https://api.textgrid.com/2010-04-01/Accounts/{account_sid}/IncomingPhoneNumbers/{phone_number_sid}.json"
-    
-#     # Prepare the webhook configuration
-#     payload = {
-#         "smsUrl": webhook_url,  # Your webhook URL
-#         "smsMethod": "POST",    # Using POST method
-#         "statusCallback": webhook_url,  # Same URL for status callbacks
-#         "statusCallbackMethod": "POST"
-#     }
-    
-#     # Create the authorization header
-#     auth_string = f"{account_sid}:{auth_token}"
-#     auth_encoded = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
-    
-#     headers = {
-#         "Content-Type": "application/x-www-form-urlencoded",
-#         "Authorization": f"Bearer {auth_encoded}"
-#     }
-
-#     try:
-#         response = requests.post(url, data=payload, headers=headers)
-        
-#         if response.status_code == 401:
-#             raise HTTPException(status_code=401, detail="Unauthorized: Invalid credentials")
-        
-#         if response.status_code != 200:
-#             raise HTTPException(
-#                 status_code=response.status_code,
-#                 detail=f"Failed to update phone number: {response.text}"
-#             )
-        
-#         return response.json()
-    
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error updating phone number: {str(e)}")
-
-
-# @router.post("/configure-webhook")
-# async def configure_webhook(
-#     account_sid: str,
-#     phone_number_sid: str,
-#     webhook_url: str = "https://519044fb025af0.lhr.life/api/v1/sms/receive-sms"  #webhook URL
-# ):
-#     """
-#     Configure the webhook URL for a TextGrid phone number
-#     """
-#     try:
-#         # Get these from your environment variables or secure configuration
-#         TEXTGRID_AUTH_TOKEN = "your_auth_token_here"
-        
-#         result = update_phone_number_webhook(
-#             account_sid=account_sid,
-#             phone_number_sid=phone_number_sid,
-#             webhook_url=webhook_url,
-#             auth_token=TEXTGRID_AUTH_TOKEN
-#         )
-        
-#         return {
-#             "status": "success",
-#             "message": "Webhook configured successfully",
-#             "details": result
-#         }
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 def list_phone_numbers(account_sid: str, auth_token: str) -> dict:

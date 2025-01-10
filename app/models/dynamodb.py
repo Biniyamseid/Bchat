@@ -82,7 +82,8 @@ class Chatbot(Model):
     id = UnicodeAttribute(hash_key=True)
     name = UnicodeAttribute()
     chatbot_script_id = UnicodeAttribute()
-    lead_information_list_ids = ListAttribute(of=UnicodeAttribute,null=True)
+    # lead_information_list_ids = ListAttribute(null=True, default=list)  # Changed to ListAttribute
+    lead_information_list_ids = ListAttribute(of=UnicodeAttribute, null=True, default=list)
     instructions = UnicodeAttribute(null=True)
     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
@@ -107,11 +108,22 @@ class Chatbot(Model):
     opinions = ListAttribute(of=UnicodeAttribute, null=True)
     ai_creativity = NumberAttribute(null=True)
     scorecard = MapAttribute(null=True)
+    
+    def to_dict(self):
+        """Convert model to dictionary"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'lead_information_list_ids': list(self.lead_information_list_ids) if self.lead_information_list_ids else [],
+            'chatbot_script_id': self.chatbot_script_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
-    async def save(self, *args, **kwargs):
-        if not await is_name_unique(Chatbot, self.name, exclude_id=self.id):
-            raise ValueError("Chatbot name must be unique")
-        await asyncio.to_thread(super().save, *args, **kwargs)
+    # async def save(self, *args, **kwargs):
+    #     if not await is_name_unique(Chatbot, self.name, exclude_id=self.id):
+    #         raise ValueError("Chatbot name must be unique")
+    #     await asyncio.to_thread(super().save, *args, **kwargs)
 
 
 class Message(MapAttribute):
@@ -263,10 +275,10 @@ class LeadInformationList(Model):
     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
 
-    async def save(self, *args, **kwargs):
-        if not await is_name_unique(LeadInformationList, self.name, exclude_id=self.id):
-            raise ValueError("Lead information list name must be unique")
-        await asyncio.to_thread(super().save, *args, **kwargs)
+    # async def save(self, *args, **kwargs):
+    #     if not await is_name_unique(LeadInformationList, self.name, exclude_id=self.id):
+    #         raise ValueError("Lead information list name must be unique")
+    #     await asyncio.to_thread(super().save, *args, **kwargs)
 
 class LeadInformation(Model):
     class Meta:
@@ -392,7 +404,7 @@ def health_check():
     
     
 # uncomment it to check the connection
-# health_check()
+health_check()
 def add_chat_session(item: dict):
     try:
         item_id = item.get("id")
