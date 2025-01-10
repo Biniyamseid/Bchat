@@ -1,4 +1,4 @@
-````markdown:README.md
+
 # SMS Server
 
 A FastAPI-based SMS server that provides chat functionality using OpenAI's GPT models and DynamoDB for data persistence.
@@ -119,8 +119,4 @@ To contribute to the project:
 
 [Biniyamseid3@gmail.com] [je.biniyam@gmail.com]
 
-```
 
-
-
-```
