@@ -43,16 +43,7 @@ async def is_name_unique(model_class, name, exclude_id=None):
     
     return await asyncio.to_thread(scan_items)
 
-# async def is_name_unique(model_class, name, exclude_id=None):
-#     filter_condition = model_class.name == name
-#     if exclude_id:
-#         filter_condition &= model_class.id != exclude_id
-    
-#     try:
-#         item = await asyncio.to_thread(lambda: next(model_class.scan(filter_condition, limit=1)))
-#         return False  # Name already exists
-#     except StopIteration:
-#         return True  # Name is unique
+
 
 
 
@@ -120,10 +111,7 @@ class Chatbot(Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
-    # async def save(self, *args, **kwargs):
-    #     if not await is_name_unique(Chatbot, self.name, exclude_id=self.id):
-    #         raise ValueError("Chatbot name must be unique")
-    #     await asyncio.to_thread(super().save, *args, **kwargs)
+
 
 
 class Message(MapAttribute):
@@ -200,67 +188,6 @@ class ChatSession(Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# class ChatSession(Model):
-#     class Meta:
-#         table_name = 'chat_sessions'
-#         region = os.getenv("AWS_REGION")
-#         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-#         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    
-#     user_id = UnicodeAttribute(hash_key=True)
-#     created_at = UTCDateTimeAttribute(range_key=True, default=lambda: datetime.now(timezone.utc))  # Make aware
-#     title = UnicodeAttribute()
-#     messages = ListAttribute(of=Message)
-#     updated_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))  # Make aware
-
-#     def to_dict(self):
-#         return {
-#             "user_id": self.user_id,
-#             "created_at": self.created_at.isoformat() if self.created_at else None,
-#             "title": self.title,
-#             "messages": self.messages,
-#             "updated_at": self.updated_at.isoformat() if self.updated_at else None
-#         }
-# class ChatSession(Model):
-#     class Meta:
-#         table_name = 'chat_sessions'
-#         region = os.getenv("AWS_REGION")
-#         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-#         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-#     user_id = UnicodeAttribute(hash_key=True)
-#     created_at = UTCDateTimeAttribute(range_key=True)
-#     title = UnicodeAttribute()
-#     messages = ListAttribute(default=list)  # Store messages as dictionaries
-#     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
-
-#     def add_message(self, message: Dict):
-#         """Add a message to the session"""
-#         if self.messages is None:
-#             self.messages = []
-            
-#         # Ensure message is in correct format
-#         message_dict = {
-#             "id": str(uuid.uuid4()),
-#             "role": message.get("role", "user"),
-#             "content": message.get("content", ""),
-#             "timestamp": datetime.utcnow().isoformat()
-#         }
-#         self.messages.append(message_dict)
-#         self.updated_at = datetime.utcnow()
-        
-#     def get_messages(self):
-#         """Get all messages in the session"""
-#         return self.messages if self.messages else []
-
-#     def to_dict(self):
-#         return {
-#             "user_id": self.user_id,
-#             "created_at": self.created_at.isoformat() if self.created_at else None,
-#             "title": self.title,
-#             "messages": self.messages,
-#             "updated_at": self.updated_at.isoformat() if self.updated_at else None
-#         }
 
 class LeadInformationList(Model):
     class Meta:
@@ -275,10 +202,7 @@ class LeadInformationList(Model):
     created_at = UTCDateTimeAttribute(default=datetime.utcnow)
     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
 
-    # async def save(self, *args, **kwargs):
-    #     if not await is_name_unique(LeadInformationList, self.name, exclude_id=self.id):
-    #         raise ValueError("Lead information list name must be unique")
-    #     await asyncio.to_thread(super().save, *args, **kwargs)
+
 
 class LeadInformation(Model):
     class Meta:
@@ -312,17 +236,7 @@ class LeadInformation(Model):
         }
 
 
-# class ChatbotScript(Model):
-#     class Meta:
-#         table_name = 'chatbot_scripts'
-#         region = os.getenv("AWS_REGION")
-#         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-#         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    
-#     id = UnicodeAttribute(hash_key=True)
-#     content = UnicodeAttribute()
-#     created_at = UTCDateTimeAttribute(range_key=True,default=datetime.utcnow)
-#     updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
+
     
     
 from pynamodb.models import Model

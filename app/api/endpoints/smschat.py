@@ -22,10 +22,8 @@ from app.models.dynamodb import ChatSession, LeadInformation, Chatbot, ChatbotSc
 from pynamodb.models import Model
 from fastapi import Form, Request, HTTPException
 from typing import Optional
-
 from fastapi import Request, Response
 import json
-
 import hmac
 import hashlib
 import base64
@@ -522,66 +520,7 @@ async def receive_sms(request: Request):
             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
             media_type="application/xml"
         )
-# @router.post("/receive-sms")
-# async def receive_sms(request: Request):
-#     try:
-#         # Get the raw form data
-#         form_data = await request.form()
-        
-#         # Convert form data to dict for logging
-#         webhook_data = dict(form_data)
-        
-#         # Log all received data
-#         print("Received webhook data:")
-#         print(json.dumps(webhook_data, indent=2))
-        
-#         # Extract the important fields if they exist
-#         from_number = webhook_data.get('From', webhook_data.get('from', ''))
-#         message_body = webhook_data.get('Body', webhook_data.get('body', ''))
-#         formatted_number = format_phone_number(from_number)
-#         print(f"From: {from_number}")
-#         print(f"Message: {message_body}")
 
-#         if message_body and from_number:
-#             # Create a chat request
-#             chat_request = ChatRequest(
-#                 session_id=formatted_number,
-#                 message=message_body,
-#                 user_id=formatted_number
-#             )
-
-#             # Process the message using existing chat_with_history function
-#             response = await chat_with_histor3(chat_request)
-
-#             # Return XML response as expected by TextGrid
-#             xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-#                 <Response>
-#                     <Message>{response.response}</Message>
-#                 </Response>"""
-
-#             return Response(
-#                 content=xml_response,
-#                 media_type="application/xml"
-#             )
-        
-#         # If we don't have message content, just acknowledge receipt
-#         return Response(
-#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
-#             media_type="application/xml"
-#         )
-
-#     except Exception as e:
-#         # Log any errors
-#         print(f"Error processing webhook: {str(e)}")
-#         print(f"Error type: {type(e)}")
-#         import traceback
-#         print(f"Traceback: {traceback.format_exc()}")
-        
-#         # Return empty response to acknowledge receipt
-#         return Response(
-#             content="<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>",
-#             media_type="application/xml"
-#         )
 
 def verify_textgrid_signature(signature: str, url: str, params: dict) -> bool:
     return True

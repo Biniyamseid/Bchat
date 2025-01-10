@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     TEXTGRID_ACCOUNT_SID: str = "KxyPVgnXwhFE48n6dcYCcA=="
-    TEXTGRID_AUTH_TOKEN: str = "98D0D330FC624212A1DF514A7A9BA2BA"
+    TEXTGRID_AUTH_TOKEN: str = os.getenv("TEXTGRID_AUTH_TOKEN")
     TEXTGRID_PHONE_NUMBER_SID: Optional[str] = None
-    WEBHOOK_URL: Optional[str] = "https://519044fb025af0.lhr.life/api/v1/sms/receive-sms"
+    WEBHOOK_URL: Optional[str] = os.getenv("WEBHOOK_URL")
 
     
     
