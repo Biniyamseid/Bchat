@@ -2,11 +2,11 @@ from typing import Optional
 import uuid
 from datetime import datetime
 from fastapi import HTTPException
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI  
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
 from ..models.dynamodb import ChatSession, Message, ChatbotScript, MessageAttribute
-from ..models.db import health_check, add_item, get_item, update_item,get_or_create_item
+# from ..models.db import health_check, add_item, get_item, update_item,get_or_create_item
 
 from ..core.config import get_settings
 

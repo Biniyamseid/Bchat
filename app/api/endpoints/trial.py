@@ -6,7 +6,8 @@ import uuid
 from typing import Optional
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+# from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI  
 from botocore.exceptions import ClientError
 
 router = APIRouter()

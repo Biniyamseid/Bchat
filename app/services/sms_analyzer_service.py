@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI  
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from fastapi import HTTPException
@@ -19,6 +19,7 @@ class SMSAnalyzerService:
 
     def _initialize_vectorstore(self):
         """Initialize an empty vectorstore."""
+        
         texts = ["Default initialization text"]
         self.vectorstore = FAISS.from_texts(texts, embedding=self.embeddings)
 
