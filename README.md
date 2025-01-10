@@ -44,7 +44,7 @@ OPENAI_API_KEY=your_openai_api_key
 TEXTGRID_ACCOUNT_SID=
 TEXTGRID_AUTH_TOKEN=
 TEXTGRID_PHONE_NUMBER_SID=
-WEBHOOK_URL=
+WEBHOOK_URL=https://ip-address/api/v1/sms/receive-sms
 
 ```
 
