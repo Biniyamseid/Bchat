@@ -40,6 +40,12 @@ AWS_REGION=us-east-2
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 OPENAI_API_KEY=your_openai_api_key
+
+TEXTGRID_ACCOUNT_SID=
+TEXTGRID_AUTH_TOKEN=
+TEXTGRID_PHONE_NUMBER_SID=
+WEBHOOK_URL=
+
 ```
 
 2. Make sure your AWS credentials have appropriate permissions to create and manage DynamoDB tables.
