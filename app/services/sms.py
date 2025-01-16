@@ -58,10 +58,7 @@ class SMSService:
         session_id: Optional[str] = None
     ) -> Dict:
         try:
-            # TODO: Implement actual SMS sending logic
-            # This is where you'd integrate with your SMS provider
-
-            # Log the outgoing message
+           
             if session_id:
                 session = await self.chat_repository.get_by_id(session_id)
                 if session:

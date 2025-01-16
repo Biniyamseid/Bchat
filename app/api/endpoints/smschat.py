@@ -32,6 +32,7 @@ from fastapi import Request, Header, HTTPException, Form
 from typing import Optional
 import requests
 from fastapi import HTTPException
+import traceback
 
 
 from pynamodb.attributes import (
@@ -514,7 +515,7 @@ async def receive_sms(request: Request):
     except Exception as e:
         print(f"Error processing webhook: {str(e)}")
         print(f"Error type: {type(e)}")
-        import traceback
+        
         print(f"Traceback: {traceback.format_exc()}")
         
         return Response(
