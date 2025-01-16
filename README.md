@@ -1,7 +1,10 @@
-
 # SMS Server
 
 A FastAPI-based SMS server that provides chat functionality using OpenAI's GPT models and DynamoDB for data persistence.
+
+## 🚨 Important Notice for Developers
+
+Before setting up the project, please read our [Developer Guide](DEVELOPER_GUIDE.md) to avoid common setup issues and learn best practices.
 
 ## Prerequisites
 
@@ -13,10 +16,11 @@ A FastAPI-based SMS server that provides chat functionality using OpenAI's GPT m
 ## Installation
 
 1. Clone the repository
+
 ```bash
 git clone https://github.com/Cr-ai-mer/sms-server.git
 cd sms-server
-````
+```
 
 2. Create and activate a virtual environment
 
@@ -124,5 +128,3 @@ To contribute to the project:
 ## Support
 
 [Biniyamseid3@gmail.com] [je.biniyam@gmail.com]
-
-
