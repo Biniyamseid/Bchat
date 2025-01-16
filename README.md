@@ -127,4 +127,14 @@ To contribute to the project:
 
 ## Support
 
+## 📞 Support
+
+If you encounter any issues not covered in the [Developer Guide](DEVELOPER_GUIDE.md), please:
+
+1. Check existing GitHub issues
+2. Create a new issue with detailed information
+3. Reference relevant sections of the Developer Guide
+
+For urgent matters, contact: [<the developers>](mailto:je.biniyam@gmail.com)
+
 [Biniyamseid3@gmail.com] [je.biniyam@gmail.com]
