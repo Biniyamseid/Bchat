@@ -78,3 +78,7 @@ urllib3==2.3.0
 uvicorn==0.34.0
 yarl==1.18.3
 pandas>=2.0.0
+pypdf==5.1.0
+python-multipart==0.0.20
+PyPDF2==3.0.1
+aiobotoc3==13.3.0
