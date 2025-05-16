@@ -138,3 +138,4 @@ If you encounter any issues not covered in the [Developer Guide](DEVELOPER_GUIDE
 For urgent matters, contact: [<the developers>](mailto:je.biniyam@gmail.com)
 
 [Biniyamseid3@gmail.com] [je.biniyam@gmail.com]
+# Bchat
